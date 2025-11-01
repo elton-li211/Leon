@@ -10,6 +10,47 @@ import { getDb } from '../database.js';
 const router = express.Router();
 
 /**
+ * Simple intent parser (works without API keys for MVP)
+ * Uses keyword matching instead of AI
+ */
+function parseIntentSimple(message) {
+  const msg = message.toLowerCase();
+
+  // Extract stock symbols (uppercase words, typically 1-5 chars)
+  const symbolPattern = /\b[A-Z]{1,5}\b/g;
+  const stocks = message.match(symbolPattern) || [];
+
+  // Analyze intent
+  if (msg.includes('analyze') || msg.includes('analysis') || msg.includes('check')) {
+    return {
+      component: 'A',
+      action: 'analyze',
+      stocks: stocks,
+      confidence: 9
+    };
+  }
+
+  // Discover intent
+  if (msg.includes('find') || msg.includes('search') || msg.includes('discover') ||
+      msg.includes('stocks for') || msg.includes('what stocks')) {
+    return {
+      component: 'A',
+      action: 'discover',
+      stocks: stocks,
+      confidence: 8
+    };
+  }
+
+  // Default
+  return {
+    component: 'A',
+    action: 'general',
+    stocks: stocks,
+    confidence: 5
+  };
+}
+
+/**
  * POST /api/chat
  * Main chat endpoint - parses intent and routes to appropriate component
  */
@@ -23,8 +64,8 @@ router.post('/', async (req, res) => {
 
     console.log(`\n💬 User: ${message}`);
 
-    // Parse intent
-    const intent = await parseIntent(message);
+    // Parse intent using simple keyword matching (no API needed for MVP)
+    const intent = parseIntentSimple(message);
     console.log(`🎯 Intent:`, intent);
 
     let response = '';
